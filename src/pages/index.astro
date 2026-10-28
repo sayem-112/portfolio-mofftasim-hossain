@@ -1,0 +1,647 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../layouts/Base.astro";
+import DitherFrame from "../components/DitherFrame.astro";
+import CardStage from "../components/CardStage.astro";
+import Icon from "../components/Icon.astro";
+import { STATUS, CV, EMAIL, GITHUB, LINKEDIN } from "../lib";
+import * as si from "simple-icons";
+
+const work = (await getCollection("work")).sort((a, b) => a.data.order - b.data.order);
+const featured = work.filter((w) => w.data.kind === "featured");
+const research = work.filter((w) => w.data.kind === "research");
+const coursework = work.filter((w) => w.data.kind === "coursework");
+// Research leads: it holds the A+ thesis, the strongest work outside the featured cards.
+const groups = [
+  { id: "research", title: "Research", items: research },
+  { id: "coursework", title: "Coursework", items: coursework },
+];
+
+// Dated milestones, newest first. Only real events; links go to the project they belong to.
+const recently = [
+  { when: "Oct 2026", text: "Started", link: { label: "Rift", href: "/work/rift" }, after: ", a book reader that keeps your place across devices." },
+  { when: "Sep 2026", text: "Started", link: { label: "SortWise", href: "/work/sortwise" }, after: ", now open source with a live demo." },
+  { when: "Jul 2026", text: "National finalist at Techathon Nationals with", link: { label: "WattsUp and Vantage Arm", href: "/work/techathon" }, after: "." },
+  { when: "Jun 2026", text: "Finalist at Infinity AI BuildFest, out of 3,500+ registrants, with", link: { label: "Polaris", href: "/work/polaris" }, after: "." },
+  { when: "Jun 2026", text: "Finished my thesis,", link: { label: "Multi-Portrait Biometric Unlinkability Under Generative Editing", href: "/work/obscrowd" }, after: ", graded A+." },
+  { when: "2026", text: "Special Recognition at the Build with Gemma challenge on Kaggle, for", link: { label: "Polaris", href: "/work/polaris" }, after: "." },
+];
+
+// Each chip is a name and an icon: a tool's Simple Icons mark (CC0, filled), or for an idea with no
+// brand, a Lucide glyph (ISC, stroked) from the same family as the rest of the site's icons.
+type Glyph = { fill: string } | { stroke: string };
+const mark = (key: keyof typeof si): Glyph => ({ fill: (si[key] as { path: string }).path });
+const lucide = {
+  database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
+  braces:
+    '<path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/>',
+  fileSearch:
+    '<path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M4.268 21a2 2 0 0 0 1.727 1H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v3"/><path d="m9 18-1.5-1.5"/><circle cx="5" cy="14" r="3"/>',
+};
+const glyph = (name: keyof typeof lucide): Glyph => ({ stroke: lucide[name] });
+const stack: [string, [string, Glyph][]][] = [
+  ["Languages", [["Go", mark("siGo")], ["TypeScript", mark("siTypescript")], ["Python", mark("siPython")], ["C", mark("siC")], ["SQL", glyph("database")]]],
+  ["Backend", [["Node.js", mark("siNodedotjs")], ["Express", mark("siExpress")], ["Next.js", mark("siNextdotjs")], ["REST APIs", glyph("braces")], ["Socket.IO", mark("siSocketdotio")]]],
+  ["Data", [["SQLite", mark("siSqlite")], ["MongoDB", mark("siMongodb")], ["MySQL", mark("siMysql")], ["Docker", mark("siDocker")]]],
+  ["AI", [["RAG", glyph("fileSearch")], ["Gemini", mark("siGooglegemini")], ["PyTorch", mark("siPytorch")], ["Hugging Face", mark("siHuggingface")]]],
+];
+---
+
+<Base
+  title="Mofftasim Hossain Sayem, backend engineer"
+  description="Backend engineer in Dhaka. Go, TypeScript and Python. Building Rift and SortWise."
+>
+  <section class="band" aria-labelledby="name">
+    <div class="col section hero">
+      <DitherFrame />
+
+      <div class="who">
+        <div>
+          <h1 id="name">Mofftasim Hossain Sayem</h1>
+          <p class="role">Backend engineer · Go, TypeScript, Python</p>
+          <p class="facts mono">Dhaka · BRAC University, CSE '26</p>
+        </div>
+        <span class="status open" data-tone="live">Open to work</span>
+      </div>
+
+      <div class="bio" data-reveal>
+        <p>I build backends, and the AI features that sit on them.</p>
+        <p class="now">
+          <span class="mono faint">Now:</span> building <a class="link" href="/work/rift">Rift</a>. Start a book on your
+          phone, finish it on your laptop, on the same page.
+        </p>
+      </div>
+
+      <div class="cta" data-reveal>
+        <a class="btn solid" href={CV} target="_blank" rel="noopener"><Icon name="file" />Resume</a>
+        <a class="btn" href={`mailto:${EMAIL}`}><Icon name="mail" />Email me</a>
+        <span class="copy-hint fine-only">or press <kbd>C</kbd> to copy the address</span>
+      </div>
+      <p class="toast mono" data-toast role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <div class="hatch"><div class="col"></div></div>
+
+  <section class="band" id="work" aria-labelledby="work-h">
+    <div class="col section">
+      <div class="section-head" data-reveal>
+        <h2 id="work-h" class="h2">Selected work</h2>
+        <p class="aside">The ones I'd talk about first.</p>
+      </div>
+      <CardStage items={featured} />
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="more-h">
+    <div class="col section">
+      <div class="more-head" data-reveal>
+        <h2 id="more-h" class="h2">More work</h2>
+        <div class="pills" role="tablist" aria-label="More work" data-pills hidden>
+          <span class="pill-ink" aria-hidden="true"></span>
+          {
+            groups.map((g, i) => (
+              <button
+                type="button"
+                role="tab"
+                id={`tab-${g.id}`}
+                aria-controls={g.id}
+                aria-selected={i === 0 ? "true" : "false"}
+                tabindex={i === 0 ? 0 : -1}
+                data-pill={g.id}
+              >
+                {g.title} <span class="mono faint">{g.items.length}</span>
+              </button>
+            ))
+          }
+        </div>
+      </div>
+      <div class="panels" data-panels>
+        {
+          groups.map((g) => (
+            <section class="panel" id={g.id} role="tabpanel" aria-labelledby={`tab-${g.id}`} data-panel={g.id}>
+              <h3 class="panel-title mono">{g.title}</h3>
+              <ol class="rows focus-list">
+                {g.items.map((w) => {
+                  const st = STATUS[w.data.status];
+                  return (
+                    <li>
+                      <a class="row" href={`/work/${w.id}`}>
+                        <span class="row-main">
+                          <span class="row-top">
+                            <span class="row-name">{w.data.title}</span>
+                            <span class="status" data-tone={st.tone}>
+                              {w.data.status === "thesis" ? st.label : (w.data.course ?? st.label)}
+                            </span>
+                          </span>
+                          <span class="row-blurb">{w.data.blurb}</span>
+                        </span>
+                        <span class="row-side mono">
+                          {w.data.year}
+                          <Icon name="arrow-right" />
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <div class="hatch"><div class="col"></div></div>
+
+  <section class="band" aria-labelledby="recent-h">
+    <div class="col section">
+      <div class="section-head" data-reveal>
+        <h2 id="recent-h" class="h2">Recently</h2>
+      </div>
+      <ol class="log" data-reveal="stagger">
+        {
+          recently.map((r) => (
+            <li>
+              <span class="mono log-when">{r.when}</span>
+              <span>
+                {r.text} <a class="link" href={r.link.href}>{r.link.label}</a>
+                {r.after}
+              </span>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="band" id="stack" aria-labelledby="stack-h">
+    <div class="col section">
+      <div class="section-head" data-reveal>
+        <h2 id="stack-h" class="h2">Stack</h2>
+      </div>
+      <dl class="stack" data-reveal="stagger">
+        {
+          stack.map(([k, items]) => (
+            <div class="stack-row">
+              <dt>{k}</dt>
+              <dd class="chips">
+                {items.map(([t, g]) => (
+                  <span class="chip">
+                    {"fill" in g ? (
+                      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d={g.fill} />
+                      </svg>
+                    ) : (
+                      <svg class="mark glyph" viewBox="0 0 24 24" aria-hidden="true" set:html={g.stroke} />
+                    )}
+                    {t}
+                  </span>
+                ))}
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+      <ul class="elsewhere" data-reveal>
+        <li><a href={GITHUB}><Icon name="github" />GitHub<Icon name="arrow-up-right" /></a></li>
+        <li><a href={LINKEDIN}><Icon name="linkedin" />LinkedIn<Icon name="arrow-up-right" /></a></li>
+      </ul>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { animate } from "motion";
+  import { EMAIL } from "../lib";
+
+  // More work: two pills swap between the lists. Without scripts both lists simply show, one after the other.
+  const pills = document.querySelector<HTMLElement>("[data-pills]");
+  const panelsWrap = document.querySelector<HTMLElement>("[data-panels]");
+  if (pills && panelsWrap) {
+    const tabs = [...pills.querySelectorAll<HTMLButtonElement>("[data-pill]")];
+    const panels = [...panelsWrap.querySelectorAll<HTMLElement>("[data-panel]")];
+    const ink = pills.querySelector<HTMLElement>(".pill-ink")!;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    pills.hidden = false;
+    panelsWrap.classList.add("tabbed");
+    // Keep the area as tall as the taller list, so switching never moves the page below.
+    panelsWrap.style.minHeight = `${Math.max(...panels.map((p) => p.offsetHeight))}px`;
+    const place = (t: HTMLElement) => {
+      ink.style.width = `${t.offsetWidth}px`;
+      ink.style.transform = `translateX(${t.offsetLeft - 4}px)`;
+    };
+    const select = (id: string, focus = false, animateIn = true) => {
+      tabs.forEach((t) => {
+        const on = t.dataset.pill === id;
+        t.setAttribute("aria-selected", String(on));
+        t.tabIndex = on ? 0 : -1;
+        if (on) {
+          place(t);
+          if (focus) t.focus();
+        }
+      });
+      panels.forEach((p) => {
+        const on = p.dataset.panel === id;
+        p.hidden = !on;
+        if (on && animateIn && !still) animate(p, { opacity: [0, 1], y: [4, 0] }, { duration: 0.18, ease: [0.16, 1, 0.3, 1] });
+      });
+    };
+    const fromHash = tabs.find((t) => `#${t.dataset.pill}` === location.hash);
+    select((fromHash ?? tabs[0]).dataset.pill!, false, false);
+    tabs.forEach((t, i) => {
+      t.addEventListener("click", () => {
+        select(t.dataset.pill!);
+        history.replaceState(null, "", `#${t.dataset.pill}`);
+      });
+      t.addEventListener("keydown", (e) => {
+        const to = ({ ArrowRight: i + 1, ArrowLeft: i - 1 } as Record<string, number>)[e.key];
+        if (to === undefined) return;
+        e.preventDefault();
+        const next = tabs[(to + tabs.length) % tabs.length];
+        select(next.dataset.pill!, true);
+        history.replaceState(null, "", `#${next.dataset.pill}`);
+      });
+    });
+    addEventListener("resize", () => place(tabs.find((t) => t.getAttribute("aria-selected") === "true")!));
+  }
+  // Press C anywhere outside a text field to copy the email address.
+  const toast = document.querySelector<HTMLElement>("[data-toast]");
+  let clear = 0;
+  document.addEventListener("keydown", async (e) => {
+    if (e.key.toLowerCase() !== "c" || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+    if ((e.target as HTMLElement).closest("input, textarea, [contenteditable]")) return;
+    if (getSelection()?.toString()) return;
+    try {
+      await navigator.clipboard.writeText(EMAIL);
+      if (toast) toast.textContent = `${EMAIL} copied`;
+    } catch {
+      if (toast) toast.textContent = `Couldn't copy. It's ${EMAIL}`;
+    }
+    clearTimeout(clear);
+    clear = window.setTimeout(() => toast && (toast.textContent = ""), 3000);
+  });
+</script>
+
+<style>
+  .hero {
+    padding-top: 1.75rem;
+  }
+
+  .who {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.6rem;
+  }
+
+  h1 {
+    font-size: clamp(1.75rem, 5vw, 2.35rem);
+    line-height: 1.1;
+    font-weight: 650;
+    letter-spacing: -0.04em;
+  }
+
+  .role {
+    margin-top: 0.45rem;
+    font-size: 1.05rem;
+    color: var(--fg);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .facts {
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    color: var(--fg-3);
+  }
+
+  .open {
+    margin-top: 0.4rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid rgb(74 222 128 / 0.25);
+    border-radius: 99px;
+    background: rgb(74 222 128 / 0.06);
+    color: #b6f3c9;
+  }
+
+  @media (max-width: 520px) {
+    .who {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .open {
+      margin-top: 0;
+    }
+  }
+
+  .bio {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 1.3rem;
+    max-width: 60ch;
+    color: var(--fg-2);
+    font-size: 1.02rem;
+  }
+
+  .bio .link {
+    color: var(--fg);
+  }
+
+  .now .mono {
+    font-size: 0.75rem;
+  }
+
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 0.6rem;
+    margin-top: 1.5rem;
+  }
+
+  .copy-hint {
+    margin-left: 0.5rem;
+    font-size: 0.84rem;
+    color: var(--fg-3);
+  }
+
+  .toast {
+    min-height: 1.2rem;
+    margin-top: 0.6rem;
+    color: var(--live);
+    font-size: 0.75rem;
+  }
+
+  @media not ((hover: hover) and (pointer: fine)) {
+    .fine-only {
+      display: none;
+    }
+  }
+
+  .more-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .pills {
+    position: relative;
+    display: inline-flex;
+    padding: 0.25rem;
+    border: 1px solid var(--line);
+    border-radius: 99px;
+    background: var(--raise);
+  }
+
+  .pills[hidden] {
+    display: none;
+  }
+
+  /* One indicator slides between the two options instead of each pill swapping its own background. */
+  .pill-ink {
+    position: absolute;
+    top: 0.25rem;
+    bottom: 0.25rem;
+    left: 0.25rem;
+    border-radius: 99px;
+    background: var(--raise-2);
+    border: 1px solid var(--line-2);
+    transition:
+      transform 320ms var(--ease-out),
+      width 320ms var(--ease-out);
+  }
+
+  .pills button {
+    position: relative;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border-radius: 99px;
+    font-size: 0.88rem;
+    color: var(--fg-3);
+    transition: color 200ms;
+  }
+
+  .pills button[aria-selected="true"],
+  .pills button:hover {
+    color: var(--fg);
+  }
+
+  .pills .mono {
+    margin-left: 0.3rem;
+    font-size: 0.72rem;
+  }
+
+  .panel-title {
+    margin-bottom: 0.6rem;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--fg-2);
+  }
+
+  .panel + .panel {
+    margin-top: 2rem;
+  }
+
+  .tabbed .panel + .panel {
+    margin-top: 0;
+  }
+
+  .tabbed .panel-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .panel[hidden] {
+    display: none;
+  }
+
+  @media (max-width: 520px) {
+    .pills {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+    }
+  }
+
+  .rows {
+    border-top: 1px solid var(--line);
+  }
+
+  .row {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: space-between;
+    padding: 0.95rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .row-main {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .row-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.8rem;
+  }
+
+  .row-name {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .row-blurb {
+    font-size: 0.88rem;
+    color: var(--fg-3);
+    line-height: 1.5;
+  }
+
+  .row-side {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    flex: none;
+    font-size: 0.75rem;
+    color: var(--fg-3);
+    padding-top: 0.2rem;
+  }
+
+  .row-side :global(svg) {
+    width: 0.9rem;
+    height: 0.9rem;
+    transition:
+      transform 250ms var(--ease-out),
+      color 250ms;
+  }
+
+  .row:hover .row-side :global(svg),
+  .row:focus-visible .row-side :global(svg) {
+    transform: translateX(3px);
+    color: var(--fg);
+  }
+
+  .log {
+    border-top: 1px solid var(--line);
+  }
+
+  .log li {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: 0.25rem 1rem;
+    padding: 0.8rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+    color: var(--fg-2);
+    font-size: 0.95rem;
+  }
+
+  .log-when {
+    padding-top: 0.15rem;
+    font-size: 0.75rem;
+    color: var(--fg-3);
+  }
+
+  .log .link {
+    color: var(--fg);
+  }
+
+  @media (max-width: 520px) {
+    .log li {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .stack {
+    border-top: 1px solid var(--line);
+  }
+
+  .stack-row {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: 0.6rem 1rem;
+    padding: 0.85rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .stack-row dt {
+    font-size: 0.9rem;
+    padding-top: 0.15rem;
+    color: var(--fg-2);
+  }
+
+  .stack :global(.chip) {
+    gap: 0.4rem;
+  }
+
+  .mark {
+    width: 0.8rem;
+    height: 0.8rem;
+    fill: currentColor;
+    opacity: 0.9;
+  }
+
+  /* Lucide glyphs are outlines: same box, drawn as strokes at the site's icon weight. */
+  .mark.glyph {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  @media (max-width: 560px) {
+    .stack-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .elsewhere {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .elsewhere a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 0.55rem;
+    background: var(--raise);
+    font-size: 0.88rem;
+    transition:
+      border-color 200ms,
+      background 200ms;
+  }
+
+  .elsewhere a:hover {
+    border-color: var(--line-2);
+    background: var(--raise-2);
+  }
+
+  .elsewhere :global(svg) {
+    width: 1rem;
+    height: 1rem;
+    color: var(--fg-2);
+  }
+
+  .elsewhere :global(svg:last-child) {
+    width: 0.8rem;
+    height: 0.8rem;
+    color: var(--fg-3);
+  }
+</style>

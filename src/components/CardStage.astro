@@ -1,0 +1,465 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { STATUS } from "../lib";
+
+interface Props {
+  items: CollectionEntry<"work">[];
+}
+
+const { items } = Astro.props;
+// Where each card lands, centred on the stage: offset in card-widths, a turn, a drop in rem.
+// Hand-placed rather than a regular arc, so the pile looks dropped, not dealt.
+const spots = [
+  { x: -1.2, r: -6, y: 1.4 },
+  { x: -0.42, r: 2.5, y: 0 },
+  { x: 0.42, r: -2.5, y: 1 },
+  { x: 1.2, r: 5.5, y: 2.1 },
+];
+const fan = items.map((_, i) => spots[i % spots.length]);
+// Each card rests on the one to its left, so only right edges are covered and every title (set on the left) shows.
+const layer = items.map((_, i) => i + 1);
+---
+
+<div class="stage-wrap">
+  <ul class="stage" data-stage aria-label="Selected work">
+    {
+      items.map((item, i) => {
+        const d = item.data;
+        const s = STATUS[d.status];
+        return (
+          <li class="card" style={`--fx:${fan[i].x};--fr:${fan[i].r}deg;--fy:${fan[i].y}rem;--z:${layer[i]}`} data-card data-z={layer[i]}>
+            <a
+              href={`/work/${item.id}`}
+              draggable="false"
+              aria-label={`${d.title}, ${s.label.toLowerCase()}${d.tag ? `. ${d.tag.replace(/ · /g, ", ")}` : ""}`}
+              data-vt={`shot-${item.id}`}
+            >
+              <span class="shot">
+                <img
+                  src={d.cover ?? d.shots[0]?.src}
+                  alt=""
+                  width="1200"
+                  height="750"
+                  loading="lazy"
+                  decoding="async"
+                  draggable="false"
+                />
+                <span class="open mono" aria-hidden="true">
+                  Open
+                  <svg viewBox="0 0 24 24">
+                    <path d="M7 7h10v10" />
+                    <path d="M7 17 17 7" />
+                  </svg>
+                </span>
+              </span>
+              <span class="name">{d.title}</span>
+              <span class="meta">
+                <span class="status" data-tone={s.tone}>
+                  {s.label}
+                </span>
+                {d.tag && <span class="tag mono">{d.tag}</span>}
+              </span>
+            </a>
+          </li>
+        );
+      })
+    }
+  </ul>
+  <p class="hint">
+    <span class="fine">Click a card to open it, or drag it around.</span>
+    <span class="coarse">Tap a card to open it.</span>
+    <button type="button" class="restack" data-restack hidden>Put them back</button>
+  </p>
+</div>
+
+<script>
+  const stage = document.querySelector<HTMLElement>("[data-stage]");
+  const restack = document.querySelector<HTMLButtonElement>("[data-restack]");
+  // Dragging is for a mouse or pen on the wide layout; touch keeps scrolling the page.
+  const canDrag = matchMedia("(min-width: 761px) and (pointer: fine)");
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, a), b);
+  let top = 20;
+
+  if (stage) {
+    // The cards arrive as one stack and fan out the first time the stage comes into view.
+    if (still.matches) stage.classList.add("fanned");
+    else
+      new IntersectionObserver(
+        ([entry], io) => {
+          if (entry.isIntersecting) {
+            stage.classList.add("fanned");
+            io.disconnect();
+          }
+        },
+        { threshold: 0.3 },
+      ).observe(stage);
+
+    stage.querySelectorAll<HTMLElement>("[data-card]").forEach((card) => {
+      const link = card.querySelector("a")!;
+      let sx = 0, sy = 0, bx = 0, by = 0, cx = 0, cy = 0, hw = 0, hh = 0, lastX = 0, tilt = 0, pid = -1;
+      let pressed = false, dragging = false, justDragged = false;
+      const raise = () => card.style.setProperty("--z", String(++top));
+
+      // A buried card comes to the top when the pointer moves onto it (not when the page scrolls under a still pointer).
+      let lifted = false;
+      card.addEventListener("pointermove", () => {
+        if (canDrag.matches && !pressed && !lifted) {
+          lifted = true;
+          raise();
+        }
+      });
+      card.addEventListener("pointerleave", () => (lifted = false));
+
+      card.addEventListener("pointerdown", (e) => {
+        if (!canDrag.matches || e.button !== 0) return;
+        pressed = true;
+        dragging = false;
+        justDragged = false;
+        pid = e.pointerId;
+        sx = lastX = e.clientX;
+        sy = e.clientY;
+        bx = parseFloat(card.style.getPropertyValue("--dx")) || 0;
+        by = parseFloat(card.style.getPropertyValue("--dy")) || 0;
+        const r = card.getBoundingClientRect();
+        cx = r.left + r.width / 2;
+        cy = r.top + r.height / 2;
+        hw = r.width / 2;
+        hh = r.height / 2;
+      });
+
+      card.addEventListener("pointermove", (e) => {
+        if (!pressed) return;
+        let dx = e.clientX - sx, dy = e.clientY - sy;
+        if (!dragging) {
+          // A press only becomes a drag after it travels; until then the click still opens the project.
+          if (Math.hypot(dx, dy) < 6) return;
+          dragging = true;
+          raise();
+          card.setPointerCapture(pid);
+          card.classList.remove("settling");
+          card.classList.add("held");
+          if (restack) restack.hidden = false;
+        }
+        // Keep the whole card inside the stage, so it can't cover the hint or the next section.
+        const box = stage.getBoundingClientRect();
+        dx = clamp(cx + dx, box.left + hw * 0.6, box.right - hw * 0.6) - cx;
+        dy = clamp(cy + dy, box.top + hh * 0.6, box.bottom - hh) - cy;
+        card.style.setProperty("--dx", `${bx + dx}px`);
+        card.style.setProperty("--dy", `${by + dy}px`);
+        // The card leans into the direction it's pulled, like a photo slid across a table.
+        tilt = tilt * 0.7 + clamp((e.clientX - lastX) * 0.5, -8, 8) * 0.3;
+        lastX = e.clientX;
+        card.style.setProperty("--tilt", `${tilt.toFixed(2)}deg`);
+      });
+
+      const release = () => {
+        if (!pressed) return;
+        pressed = false;
+        if (!dragging) return;
+        dragging = false;
+        justDragged = true;
+        tilt = 0;
+        card.classList.remove("held");
+        card.classList.add("settling");
+        card.style.setProperty("--tilt", "0deg");
+      };
+      card.addEventListener("pointerup", release);
+      card.addEventListener("pointercancel", release);
+      card.addEventListener("lostpointercapture", release);
+
+      link.addEventListener("click", (e) => {
+        // The click that ends a drag drops the card; it doesn't open it.
+        if (justDragged) {
+          e.preventDefault();
+          justDragged = false;
+          return;
+        }
+        // Only the opened card takes part in the page transition, so its screenshot grows into the project page.
+        stage.querySelectorAll<HTMLElement>(".shot").forEach((s) => s.style.removeProperty("view-transition-name"));
+        link.querySelector<HTMLElement>(".shot")!.style.viewTransitionName = link.dataset.vt!;
+      });
+      link.addEventListener("focus", raise);
+    });
+
+    restack?.addEventListener("click", () => {
+      stage.querySelectorAll<HTMLElement>("[data-card]").forEach((card) => {
+        card.classList.add("settling");
+        card.style.removeProperty("--dx");
+        card.style.removeProperty("--dy");
+        card.style.removeProperty("--tilt");
+        card.style.setProperty("--z", card.dataset.z!);
+      });
+      restack.hidden = true;
+    });
+  }
+</script>
+
+<style>
+  .stage-wrap {
+    position: relative;
+    width: min(100vw, 76rem);
+    margin-left: 50%;
+    transform: translateX(-50%);
+    padding-block: 0.5rem 0;
+  }
+
+  .stage {
+    --w: clamp(16rem, 26vw, 20rem);
+    position: relative;
+    height: calc(var(--w) * 0.625 + 9rem);
+  }
+
+  .card {
+    position: absolute;
+    left: 50%;
+    top: 1.25rem;
+    width: var(--w);
+    z-index: var(--z);
+    /* Stacked until the stage is seen, then fanned. Drag offsets ride on top. */
+    transform: translate(calc(-50% + var(--dx, 0px)), var(--dy, 0px)) rotate(calc(var(--fr) * 0.2));
+    transition: transform 900ms var(--ease-out);
+  }
+
+  @media (pointer: fine) and (min-width: 761px) {
+    .card {
+      touch-action: none;
+    }
+  }
+
+  .fanned .card {
+    transform: translate(calc(-50% + var(--fx) * var(--w) + var(--dx, 0px)), calc(var(--fy) + var(--dy, 0px)))
+      rotate(var(--fr));
+  }
+
+  .fanned .card:nth-child(2) {
+    transition-delay: 50ms;
+  }
+
+  .fanned .card:nth-child(3) {
+    transition-delay: 100ms;
+  }
+
+  .fanned .card:nth-child(4) {
+    transition-delay: 150ms;
+  }
+
+  /* Let go: the card eases back to its resting turn. */
+  .fanned .card.settling {
+    transition: transform 650ms var(--ease-out);
+    transition-delay: 0ms;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .fanned .card:hover:not(.held) {
+      transform: translate(
+          calc(-50% + var(--fx) * var(--w) + var(--dx, 0px)),
+          calc(var(--fy) - 0.75rem + var(--dy, 0px))
+        )
+        rotate(calc(var(--fr) * 0.25)) scale(1.03);
+      transition-duration: 450ms;
+      transition-delay: 0ms;
+    }
+  }
+
+  .card.held,
+  .fanned .card.held {
+    transition: none;
+    transform: translate(calc(-50% + var(--fx) * var(--w) + var(--dx, 0px)), calc(var(--fy) + var(--dy, 0px)))
+      rotate(calc(var(--fr) * 0.4 + var(--tilt, 0deg))) scale(1.04);
+  }
+
+  .card a {
+    display: block;
+    padding: 0.5rem;
+    border: 1px solid var(--line-2);
+    border-radius: calc(var(--radius) + 0.25rem);
+    background: var(--raise);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.04) inset,
+      0 18px 40px -18px rgb(0 0 0 / 0.9),
+      0 4px 12px -4px rgb(0 0 0 / 0.6);
+    user-select: none;
+    -webkit-user-drag: none;
+    transition:
+      border-color 250ms,
+      box-shadow 350ms var(--ease-out);
+  }
+
+  .card a:hover,
+  .card a:focus-visible {
+    border-color: rgb(255 255 255 / 0.3);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.06) inset,
+      0 30px 60px -22px rgb(0 0 0 / 0.95),
+      0 6px 16px -6px rgb(0 0 0 / 0.7);
+  }
+
+  .card.held a {
+    cursor: url("/cursors/grab.svg") 12 10, grabbing;
+  }
+
+  .shot {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .shot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    pointer-events: none;
+    transition: transform 600ms var(--ease-out);
+  }
+
+  .card a:hover .shot img {
+    transform: scale(1.03);
+  }
+
+  .open {
+    position: absolute;
+    right: 0.5rem;
+    top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 99px;
+    background: rgb(9 9 11 / 0.78);
+    border: 1px solid var(--line-2);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font-size: 0.7rem;
+    color: var(--fg);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity 250ms var(--ease-out),
+      transform 250ms var(--ease-out);
+  }
+
+  .open svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .card a:hover .open,
+  .card a:focus-visible .open {
+    opacity: 1;
+    transform: none;
+  }
+
+  .card.held .open {
+    opacity: 0;
+  }
+
+  .name {
+    display: block;
+    padding: 0.7rem 0.35rem 0;
+    font-weight: 600;
+    font-size: 0.98rem;
+    letter-spacing: -0.015em;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.2rem 0.75rem;
+    padding: 0.25rem 0.35rem 0.3rem;
+  }
+
+  .tag {
+    font-size: 0.72rem;
+    color: var(--fg-3);
+  }
+
+  .hint {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    min-height: 2rem;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--fg-3);
+  }
+
+  .restack {
+    min-height: 2rem;
+    padding: 0.15rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: 99px;
+    color: var(--fg-2);
+    transition:
+      color 200ms,
+      border-color 200ms;
+  }
+
+  .restack:hover {
+    color: var(--fg);
+    border-color: var(--line-2);
+  }
+
+  .restack[hidden] {
+    display: none;
+  }
+
+  .coarse {
+    display: none;
+  }
+
+  @media (pointer: coarse) {
+    .fine,
+    .restack {
+      display: none;
+    }
+
+    .coarse {
+      display: inline;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .stage-wrap {
+      width: 100vw;
+    }
+
+    .stage {
+      --w: 80vw;
+      height: auto;
+      display: flex;
+      gap: 0.85rem;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 0.5rem var(--pad) 1.25rem;
+      scrollbar-width: none;
+    }
+
+    .card,
+    .fanned .card {
+      position: relative;
+      left: auto;
+      top: auto;
+      flex: 0 0 var(--w);
+      transform: none;
+      scroll-snap-align: center;
+      touch-action: auto;
+    }
+
+    .open {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

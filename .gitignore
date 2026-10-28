@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.astro/
+.vercel/
+.netlify/
+
+# Working notes that stay local
+PRODUCT.md
+DESIGN.md

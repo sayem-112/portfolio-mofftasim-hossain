@@ -1,0 +1,428 @@
+@import "@fontsource-variable/geist/wght.css";
+@import "@fontsource-variable/geist-mono/wght.css";
+
+:root {
+  color-scheme: dark;
+
+  --bg: #09090b;
+  --raise: #101013;
+  --raise-2: #16161a;
+  --line: rgb(255 255 255 / 0.08);
+  --line-2: rgb(255 255 255 / 0.14);
+  --fg: #ededec;
+  --fg-2: #a3a3ab;
+  --fg-3: #85858f;
+  --live: #4ade80;
+  --award: #fbbf24;
+  --build: #60a5fa;
+
+  --sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --mono: "Geist Mono Variable", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --col: 46rem;
+  --pad: 1.5rem;
+  --radius: 0.75rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --pad: 1.125rem;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scrollbar-color: #2a2a30 var(--bg);
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  caret-color: var(--fg);
+  overflow-x: hidden;
+}
+
+/* A white pointer, drawn to match the page; hand on anything clickable. Fine pointers only. */
+@media (hover: hover) and (pointer: fine) {
+  html {
+    cursor: url("/cursors/arrow.svg") 4 2, auto;
+  }
+
+  a,
+  button,
+  [role="button"],
+  label,
+  summary {
+    cursor: url("/cursors/hand.svg") 10 3, pointer;
+  }
+}
+
+::selection {
+  background: rgb(237 237 236 / 0.9);
+  color: var(--bg);
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+dl,
+dd,
+figure,
+pre {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.prose a,
+.link {
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0.3);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition: text-decoration-color 200ms;
+}
+
+.prose a:hover,
+.link:hover {
+  text-decoration-color: var(--fg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+b,
+strong {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+code,
+kbd {
+  font-family: var(--mono);
+  font-size: 0.88em;
+}
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5em;
+  padding: 0 0.35em;
+  border: 1px solid var(--line-2);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  background: var(--raise);
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Page changes cross-fade, and a project card's screenshot grows into the project page's. */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-group(*) {
+  animation-duration: 480ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+}
+
+/* Hidden only for the entrance; Motion brings each one in. */
+.motion [data-reveal]:not([data-reveal="stagger"]):not(.in),
+.motion [data-reveal="stagger"] > :not(.in) {
+  opacity: 0;
+}
+
+@media print {
+  .motion [data-reveal] *,
+  .motion [data-reveal] {
+    opacity: 1 !important;
+  }
+}
+
+[id] {
+  scroll-margin-top: 4.5rem;
+}
+
+.skip {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 50;
+  background: var(--fg);
+  color: var(--bg);
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.4rem;
+}
+
+.skip:focus {
+  top: 1rem;
+}
+
+/* ------------------------------------------------------------- the frame */
+
+/* Every band spans the viewport with hairlines; its content sits in a column with hairline sides. */
+.band {
+  border-bottom: 1px solid var(--line);
+}
+
+.col {
+  width: min(100%, var(--col));
+  margin-inline: auto;
+  border-inline: 1px solid var(--line);
+  padding-inline: var(--pad);
+}
+
+@media (max-width: 760px) {
+  .col {
+    border-inline: 0;
+  }
+}
+
+.hatch {
+  height: 1.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.hatch > .col {
+  height: 100%;
+  background: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.055) 0 1px, transparent 1px 7px);
+}
+
+.section {
+  padding-block: 2.5rem 2.75rem;
+}
+
+.section-head {
+  margin-bottom: 1.75rem;
+}
+
+.h2 {
+  font-size: 1.6rem;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.h2 sup {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-3);
+  letter-spacing: 0;
+  margin-left: 0.25rem;
+  vertical-align: 0.7em;
+}
+
+.aside {
+  margin-top: 0.35rem;
+  color: var(--fg-3);
+  font-size: 0.94rem;
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+.muted {
+  color: var(--fg-2);
+}
+
+.faint {
+  color: var(--fg-3);
+}
+
+/* Status dot: green for released or live, amber for an award, grey for everything else. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+
+.status::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--fg-3);
+}
+
+.status[data-tone="live"]::before {
+  background: var(--live);
+  box-shadow: 0 0 0 3px rgb(74 222 128 / 0.15);
+}
+
+.status[data-tone="build"]::before {
+  background: var(--build);
+  box-shadow: 0 0 0 3px rgb(96 165 250 / 0.15);
+}
+
+.status[data-tone="award"]::before {
+  background: var(--award);
+  box-shadow: 0 0 0 3px rgb(251 191 36 / 0.15);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 1.6rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: var(--raise);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.375rem;
+  padding: 0 0.95rem;
+  border: 1px solid var(--line-2);
+  border-radius: 0.55rem;
+  background: var(--raise);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    background 200ms,
+    border-color 200ms,
+    transform 200ms var(--ease-out);
+}
+
+.btn:hover {
+  background: var(--raise-2);
+  border-color: rgb(255 255 255 / 0.24);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.solid {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: var(--bg);
+}
+
+.btn.solid:hover {
+  background: #fff;
+}
+
+.btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Focus mode: point at one item and everything else in the list softens out of focus. */
+@media (hover: hover) and (pointer: fine) {
+  .focus-list > * {
+    transition:
+      filter 300ms var(--ease-out),
+      opacity 300ms var(--ease-out);
+  }
+
+  /* A short delay keeps a passing pointer from flickering the whole list. */
+  html:not(.scrolling) .focus-list:has(> :hover) > :not(:hover),
+  .focus-list:has(> :focus-within) > :not(:focus-within) {
+    filter: blur(1.5px);
+    opacity: 0.5;
+    transition-delay: 90ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

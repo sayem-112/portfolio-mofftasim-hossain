@@ -1,0 +1,276 @@
+---
+import "../styles/global.css";
+import Icon from "../components/Icon.astro";
+import { EMAIL, GITHUB, LINKEDIN, CV } from "../lib";
+
+interface Props {
+  title: string;
+  description: string;
+  // The closing pitch; project pages offer to talk about that project instead.
+  ctaTitle?: string;
+  ctaText?: string;
+  // Project pages end on the work itself, so the closing pitch shrinks to one line.
+  quietFooter?: boolean;
+}
+
+const { title, description, quietFooter = false } = Astro.props;
+const ctaTitle = Astro.props.ctaTitle ?? "Write to me.";
+const ctaText = Astro.props.ctaText ?? "Backend or full-stack roles in Dhaka, on-site or hybrid. Email gets the fastest reply.";
+const home = Astro.url.pathname === "/" || Astro.url.pathname === "/index.html";
+const at = (hash: string) => (home ? hash : `/${hash}`);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#09090b" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script is:inline>
+      // Content is hidden for its entrance only when scripts run and motion is welcome.
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("motion");
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar band">
+      <div class="col topbar-row">
+        <a class="wordmark" href="/">sayem</a>
+        <nav aria-label="Sections">
+          <a href={at("#work")}>Work</a>
+          <a href={CV} target="_blank" rel="noopener">Resume</a>
+          <a href={at("#contact")}>Contact</a>
+        </nav>
+        <span class="clock mono" title="Local time in Dhaka">
+          <span class="faint">Dhaka</span> <time data-clock>--:--</time>
+        </span>
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer id="contact" data-reveal>
+      <div class="hatch"><div class="col"></div></div>
+      {
+        quietFooter ? (
+          <div class="band">
+            <p class="col foot-line">
+              <span class="faint">Hiring?</span>
+              <a class="link" href={`mailto:${EMAIL}`}>{EMAIL}</a>
+              <a class="link" href={CV} target="_blank" rel="noopener">Resume</a>
+            </p>
+          </div>
+        ) : (
+          <div class="band">
+            <div class="col section foot">
+              <h2 class="foot-title">{ctaTitle}</h2>
+              <p class="muted foot-sub">{ctaText}</p>
+              <div class="foot-actions">
+                <a class="btn solid" href={`mailto:${EMAIL}`}><Icon name="mail" />{EMAIL}</a>
+                <a class="btn" href={CV} target="_blank" rel="noopener"><Icon name="file" />Resume</a>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      <div class="band">
+        <div class="col foot-meta">
+          <span class="faint">© 2026 Mofftasim Hossain Sayem</span>
+          <span class="foot-links">
+            <a href={GITHUB} aria-label="GitHub"><Icon name="github" /></a>
+            <a href={LINKEDIN} aria-label="LinkedIn"><Icon name="linkedin" /></a>
+            <a href={`mailto:${EMAIL}`} aria-label="Email"><Icon name="mail" /></a>
+          </span>
+          <span class="faint">No cookies, no trackers.</span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      import { animate, inView, stagger } from "motion";
+
+      // One entrance grammar for the whole site: fade up out of a slight blur, on the same ease as everything else.
+      const ease = [0.16, 1, 0.3, 1] as const;
+      const enter = { opacity: [0, 1], y: [14, 0], filter: ["blur(6px)", "blur(0px)"] };
+      if (document.documentElement.classList.contains("motion")) {
+        const targets = [...document.querySelectorAll<HTMLElement>("[data-reveal]")];
+        const fold = innerHeight * 0.92;
+        // What is already on screen plays as one short sequence; the rest waits until it's scrolled to.
+        const first = targets.filter((el) => el.getBoundingClientRect().top < fold);
+        const later = targets.filter((el) => !first.includes(el));
+        const parts = (el: HTMLElement) => (el.dataset.reveal === "stagger" ? [...el.children] : [el]) as HTMLElement[];
+        // Once in, hand styling back to CSS so hover and focus effects aren't pinned by inline values.
+        const settle = (els: HTMLElement[]) =>
+          els.forEach((e) => {
+            e.classList.add("in");
+            e.style.removeProperty("opacity");
+            e.style.removeProperty("filter");
+            e.style.removeProperty("transform");
+          });
+        // Motion commits final values on the frame after it finishes, so clear them one frame later.
+        const play = (els: HTMLElement[], delay: ReturnType<typeof stagger>, duration = 0.7) =>
+          animate(els, enter, { duration, ease, delay }).then(() => requestAnimationFrame(() => settle(els)));
+        play(first.flatMap(parts), stagger(0.05), 0.55);
+        later.forEach((el) => inView(el, () => void play(parts(el), stagger(0.05)), { amount: 0.15 }));
+        // Safety net: anything never scrolled into view (a full-page capture, a link preview) still shows.
+        setTimeout(() => {
+          document.querySelectorAll<HTMLElement>('[data-reveal]:not([data-reveal="stagger"]), [data-reveal="stagger"] > *').forEach((e) => e.classList.add("in"));
+        }, 4000);
+      }
+
+      // While the page scrolls, lists stay sharp: focus mode only follows a resting pointer.
+      let still = 0;
+      addEventListener(
+        "scroll",
+        () => {
+          document.documentElement.classList.add("scrolling");
+          clearTimeout(still);
+          still = window.setTimeout(() => document.documentElement.classList.remove("scrolling"), 160);
+        },
+        { passive: true },
+      );
+
+      // The top bar keeps Dhaka time, so a visitor anywhere knows whether it's a sensible hour to write.
+      const clock = document.querySelector<HTMLTimeElement>("[data-clock]");
+      if (clock) {
+        const fmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", minute: "2-digit", hour12: false });
+        const tick = () => (clock.textContent = fmt.format(new Date()));
+        tick();
+        setInterval(tick, 15000);
+      }
+    </script>
+  </body>
+</html>
+
+<style>
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: rgb(9 9 11 / 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .topbar-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    height: 3.25rem;
+  }
+
+  .wordmark {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: -0.02em;
+  }
+
+  nav {
+    display: flex;
+    gap: 1.25rem;
+    margin-left: auto;
+    font-size: 0.875rem;
+    color: var(--fg-2);
+  }
+
+  nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    transition: color 200ms;
+  }
+
+  nav a:hover {
+    color: var(--fg);
+  }
+
+  .clock {
+    font-size: 0.78rem;
+    color: var(--fg-2);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 520px) {
+    .clock {
+      display: none;
+    }
+  }
+
+  .foot {
+    padding-block: 3.5rem;
+  }
+
+  .foot-title {
+    font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+    line-height: 1.1;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+
+  .foot-sub {
+    margin-top: 0.85rem;
+    max-width: 52ch;
+  }
+
+  .foot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1.5rem;
+  }
+
+  .foot-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 1.25rem;
+    padding-block: 1.5rem;
+    font-size: 0.92rem;
+  }
+
+  .foot-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    padding-block: 1.25rem;
+    font-size: 0.8rem;
+  }
+
+  .foot-links {
+    display: flex;
+    gap: 0.25rem;
+    color: var(--fg-2);
+  }
+
+  .foot-links a {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.55rem;
+    transition: background 200ms, color 200ms;
+  }
+
+  .foot-links a:hover {
+    background: var(--raise-2);
+    color: var(--fg);
+  }
+
+  .foot-links :global(svg) {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+</style>

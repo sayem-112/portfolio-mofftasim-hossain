@@ -1,0 +1,29 @@
+---
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+---
+
+<Base title="Page not found" description="This page does not exist.">
+  <section class="band">
+    <div class="col section">
+      <h1>Nothing lives here (404).</h1>
+      <p class="muted">The link may be old, or the page moved. The projects are all on the home page.</p>
+      <p><a class="btn" href="/"><Icon name="arrow-left" />Back home</a></p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .section {
+    display: grid;
+    gap: 1rem;
+    padding-block: 5rem;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    line-height: 1.05;
+    font-weight: 650;
+    letter-spacing: -0.045em;
+  }
+</style>

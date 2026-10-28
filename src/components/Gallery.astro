@@ -1,0 +1,245 @@
+---
+interface Props {
+  shots: { src: string; alt: string; label: string }[];
+  // "hero" is the one large shot under the header; "grid" holds the rest, two to a row.
+  layout: "hero" | "grid";
+  // The hero shares its name with the home-page card, so the card grows into it.
+  transitionName?: string;
+}
+
+const { shots, layout, transitionName } = Astro.props;
+const hero = layout === "hero";
+---
+
+<div class:list={["shots", layout]} data-reveal={hero ? undefined : "stagger"}>
+  {
+    shots.map((s, i) => (
+      <figure>
+        <button type="button" class="frame" data-zoom aria-label={`Enlarge: ${s.alt}`}>
+          <img
+            src={s.src}
+            alt={s.alt}
+            width="1600"
+            height="1000"
+            decoding="async"
+            loading={hero ? "eager" : "lazy"}
+            fetchpriority={hero ? "high" : undefined}
+            style={i === 0 && transitionName ? `view-transition-name: ${transitionName}` : undefined}
+          />
+        </button>
+        {!hero && <figcaption>{s.label}</figcaption>}
+      </figure>
+    ))
+  }
+</div>
+
+{
+  /* One viewer per page; it rides with the hero, which every page with shots has. */
+  hero && (
+    <dialog class="viewer" data-viewer aria-label="Screenshot">
+      <form method="dialog" class="viewer-bar">
+        <span class="viewer-title" data-viewer-title />
+        <button class="close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      </form>
+      <div class="viewer-body">
+        <img src={shots[0].src} alt="" loading="lazy" decoding="async" data-viewer-img />
+      </div>
+    </dialog>
+  )
+}
+
+<script>
+  // Any screenshot opens at full size in a dialog that scrolls, and pinch-zooms on a phone.
+  const viewer = document.querySelector<HTMLDialogElement>("[data-viewer]");
+  if (viewer) {
+    const big = viewer.querySelector<HTMLImageElement>("[data-viewer-img]")!;
+    const title = viewer.querySelector<HTMLElement>("[data-viewer-title]")!;
+    document.querySelectorAll<HTMLButtonElement>("[data-zoom]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const img = b.querySelector("img")!;
+        big.src = img.currentSrc || img.src;
+        big.alt = img.alt;
+        title.textContent = img.alt;
+        viewer.showModal();
+      });
+    });
+    viewer.addEventListener("click", (e) => {
+      if (e.target === viewer) viewer.close();
+    });
+  }
+</script>
+
+<style>
+  /* Shots stay inside the column, so the page's vertical hairlines never run through them. */
+  .shots {
+    display: grid;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem 1rem;
+  }
+
+  /* Shots differ in shape, so grid cells share one box and letterbox the image rather than crop it. */
+  .grid .frame {
+    aspect-ratio: 16 / 10;
+    background: var(--raise);
+  }
+
+  .grid .frame img {
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* An odd one out takes the full row instead of sitting alone in half of it. */
+  .grid figure:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .grid figure:last-child:nth-child(odd) .frame {
+    aspect-ratio: auto;
+  }
+
+  @media (max-width: 760px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2rem;
+    }
+
+    .grid .frame {
+      aspect-ratio: auto;
+    }
+  }
+
+  figure {
+    min-width: 0;
+  }
+
+  /* The screenshot itself is the surface: a hairline ring, no padded tray around it. */
+  .frame {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 0.9rem;
+    background: var(--raise);
+    box-shadow: 0 0 0 1px var(--line);
+    cursor: url("/cursors/hand.svg") 10 3, zoom-in;
+    transition: box-shadow 250ms;
+  }
+
+  .frame:hover {
+    box-shadow: 0 0 0 1px var(--line-2);
+  }
+
+  .frame:focus-visible {
+    outline: 2px solid var(--fg);
+    outline-offset: 3px;
+  }
+
+  .frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: transform 600ms var(--ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .grid .frame:hover img {
+      transform: scale(1.015);
+    }
+  }
+
+  figcaption {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--fg-3);
+  }
+
+  .viewer {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  .viewer::backdrop {
+    background: rgb(0 0 0 / 0.6);
+  }
+
+  .viewer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .viewer-title {
+    overflow: hidden;
+    font-size: 0.9rem;
+    color: var(--fg-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .close {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 99px;
+    color: var(--fg-2);
+  }
+
+  .close:hover {
+    background: var(--raise-2);
+    color: var(--fg);
+  }
+
+  .close svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .viewer-body {
+    height: calc(100dvh - 3.8rem);
+    overflow: auto;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+  }
+
+  .viewer-body img {
+    max-width: none;
+    width: min(100%, 1600px);
+    height: auto;
+    border-radius: 0.5rem;
+  }
+
+  /* On a phone, show the shot at a readable size and let it scroll sideways. */
+  @media (max-width: 760px) {
+    .viewer-body {
+      place-items: start;
+    }
+
+    .viewer-body img {
+      width: 1100px;
+    }
+  }
+</style>
